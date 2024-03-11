@@ -6,20 +6,20 @@
                 <div>账号</div>
                 <input type="text" v-model="form.username" placeholder="请输入账号">
                 <!-- 提示信息 -->
-                <div v-if="form_errors.username"> {{ form_errors.username }} </div>
+                <div v-if="formErrors.username"> {{ formErrors.username }} </div>
             </div>
             <div>
                 <div>密码</div>
                 <input type="password" v-model="form.password" placeholder="请输入密码">
                 <!-- 提示信息 -->
-                <div v-if="form_errors.password"> {{ form_errors.password }} </div>
+                <div v-if="formErrors.password"> {{ formErrors.password }} </div>
             </div>
             <!-- TODO ylei 验证码 -->
             <div>
                 <div @click="login">登录</div>
                 <div>注册</div>
                 <!-- 提示信息 -->
-                <div v-if="form_errors.login"> {{ form_errors.login }} </div>
+                <div v-if="formErrors.login"> {{ formErrors.login }} </div>
             </div>
         </form>
     </div>
@@ -47,13 +47,13 @@ const form: Ref<Form> = ref({
     password: null,
 })
 // 收集验证表单的错误
-const form_errors: Ref<FormErrors> = ref({
+const formErrors: Ref<FormErrors> = ref({
     username: null,
     password: null,
     login: null,
 })
 // 动态验证表单
-const validate_username = (username: string | null): string | null => {
+const validateUsername = (username: string | null): string | null => {
     if (username === null) {
         return "用户名不能为空";
     }
@@ -68,7 +68,7 @@ const validate_username = (username: string | null): string | null => {
     return null;
 }
 // 验证密码
-const validate_password = (password: string | null): string | null => {
+const validatePassword = (password: string | null): string | null => {
     if (password === null) {
         return "密码不能为空";
     }
@@ -80,8 +80,8 @@ const validate_password = (password: string | null): string | null => {
 }
 
 const login = () => {
-    form_errors.value.username = validate_username(form.value.username);
-    form_errors.value.password = validate_password(form.value.password);
+    formErrors.value.username = validateUsername(form.value.username);
+    formErrors.value.password = validatePassword(form.value.password);
     // 获取加密的kid和公钥
 }
 
