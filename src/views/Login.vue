@@ -17,7 +17,7 @@
             <!-- TODO ylei 验证码 -->
             <div>
                 <div @click="click_login">登录</div>
-                <div>注册</div>
+                <div @click="click_register">注册</div>
                 <!-- 提示信息 -->
                 <div v-if="formErrors.login"> {{ formErrors.login }} </div>
             </div>
@@ -31,7 +31,7 @@ import { ref } from "vue";
 import type { Ref } from 'vue'
 
 import { getPublicKey } from "../api/rsa";
-import { login } from "../api/user";
+import { login, register } from "../api/user";
 import router from "../router";
 
 
@@ -85,12 +85,21 @@ const validatePassword = (password: string | null): string | null => {
     return null;
 }
 
-
-const encrypt = async (password: string, publicKey: string): Promise<string> => {
+const encrypt = async (password: string): Promise<Array<string>> => {
+    // 请求获取rsa
+    const publicKeyResponse = await getPublicKey();
+    if (publicKeyResponse.error) {
+        formErrors.value.login = publicKeyResponse.error.message;
+        return ["", ""];
+    }
+    if (publicKeyResponse.data == null) {
+        return ["", ""];
+    }
+    const { kid, public_key } = publicKeyResponse.data;
     const encoded = new TextEncoder().encode(password);
     const header = "-----BEGIN PUBLIC KEY-----";
     const footer = "-----END PUBLIC KEY-----";
-    const base64Data = publicKey.replace(header, "").replace(footer, "").trim();
+    const base64Data = public_key.replace(header, "").replace(footer, "").trim();
     const binaryData = window.atob(base64Data);
     const publicKeyBytes = new Uint8Array(binaryData.length);
     for (let i = 0; i < binaryData.length; i++) {
@@ -114,15 +123,21 @@ const encrypt = async (password: string, publicKey: string): Promise<string> => 
         encoded
     );
     // 转为base64
-    return window.btoa(Array.from(new Uint8Array(encrypted)).map(b => String.fromCharCode(b)).join(''));
+    return [kid, window.btoa(Array.from(new Uint8Array(encrypted)).map(b => String.fromCharCode(b)).join(''))];
 };
 
-
-const click_login = async () => {
+const validate = (): boolean => {
     formErrors.value.username = validateUsername(form.value.username);
     formErrors.value.password = validatePassword(form.value.password);
     // 表单验证不通过终止后续操作
     if (formErrors.value.username || formErrors.value.password) {
+        return false;
+    }
+    return true;
+}
+
+const click_login = async () => {
+    if (!validate()) {
         return;
     }
     // 密码为空终止后续操作
@@ -131,29 +146,64 @@ const click_login = async () => {
     }
     // 用户名为空终止后续操作
     if (form.value.username == null) {
-        return; 
+        return;
     }
-    // 获取加密的kid和公钥
-    const publicKeyResponse = await getPublicKey();
-    if (publicKeyResponse.error) {
-        formErrors.value.login = publicKeyResponse.error.message;
-    } else if (publicKeyResponse.data != null) {
-        // RSA公钥加密密码, 填充模式为OAEP SHA-256
-        const { kid, public_key } = publicKeyResponse.data;
-        const password = await encrypt(form.value.password, public_key);
-        const payload = {
-            kid: kid,
-            username: form.value.username,
-            password: password,
-        }
-        // 请求登录接口
-        const loginResponse = await login(payload);
-        if (loginResponse.error) {
-            formErrors.value.login = loginResponse.error.message;
-        } else {
-            // 登录成功后跳转
-            router.push("/home");
-        }
+    const [kid, password] = await encrypt(form.value.password);
+    if (kid === "" || password === "") {
+        return;
+    }
+    const payload = {
+        kid: kid,
+        username: form.value.username,
+        password: password,
+    }
+    // 请求登录接口
+    const loginResponse = await login(payload);
+    if (loginResponse.error) {
+        formErrors.value.login = loginResponse.error.message;
+    } else {
+        // 登录成功后跳转
+        router.push("/home");
+    }
+}
+
+const click_register = async () => {
+    if (!validate()) {
+        return;
+    }
+    // 密码为空终止后续操作
+    if (form.value.password == null) {
+        return;
+    }
+    // 用户名为空终止后续操作
+    if (form.value.username == null) {
+        return;
+    }
+    const [kid, password] = await encrypt(form.value.password);
+    if (kid === "" || password === "") {
+        return;
+    }
+    const payload = {
+        kid: kid,
+        username: form.value.username,
+        password: password,
+    }
+    // 请求登录接口
+    const registerResponse = await register(payload);
+    if (registerResponse.error) {
+        formErrors.value.login = registerResponse.error.message;
+    } else {
+        form.value = {
+            username: null,
+            password: null,
+        };
+        formErrors.value = {
+            username: null,
+            password: null,
+            login: null,
+        };
+        // 登录成功后跳转登录页面
+        router.push("/");
     }
 }
 </script>

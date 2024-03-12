@@ -7,6 +7,12 @@ interface LoginPayload {
     password: string,
 }
 
+interface RegisterPayload {
+    kid: string,
+    username: string,
+    password: string,
+}
+
 
 export interface User {
     id: string,
@@ -24,5 +30,11 @@ export async function login(payload: LoginPayload): Promise<FetchResponse<User>>
 
 export async function getLoginUser(): Promise<FetchResponse<User>> {
     const response = await Fetch<User>("user").get().json()
+    return buildFetchResponse<User>(response)
+}
+
+
+export async function register(payload: RegisterPayload) {
+    const response = await Fetch<User>("user").post(payload).json()
     return buildFetchResponse<User>(response)
 }
