@@ -16,7 +16,7 @@
             </div>
             <!-- TODO ylei 验证码 -->
             <div>
-                <div @click="login">登录</div>
+                <div @click="click_login">登录</div>
                 <div>注册</div>
                 <!-- 提示信息 -->
                 <div v-if="formErrors.login"> {{ formErrors.login }} </div>
@@ -27,24 +27,28 @@
 
 
 <script setup lang="ts">
-import type { Ref } from 'vue'
 import { ref } from "vue";
+import type { Ref } from 'vue'
+
+import { getPublicKey } from "../api/rsa";
+import { login } from "../api/user";
+import router from "../router";
 
 
 interface Form {
     username: string | null,
     password: string | null,
 }
+
 interface FormErrors {
     username: string | null,
     password: string | null,
     login: string | null,
 }
-
 // 表单数据
 const form: Ref<Form> = ref({
-    username: null,
-    password: null,
+    username: "test01",
+    password: "123456",
 })
 // 收集验证表单的错误
 const formErrors: Ref<FormErrors> = ref({
@@ -52,6 +56,7 @@ const formErrors: Ref<FormErrors> = ref({
     password: null,
     login: null,
 })
+
 // 动态验证表单
 const validateUsername = (username: string | null): string | null => {
     if (username === null) {
@@ -67,6 +72,7 @@ const validateUsername = (username: string | null): string | null => {
     }
     return null;
 }
+
 // 验证密码
 const validatePassword = (password: string | null): string | null => {
     if (password === null) {
@@ -79,10 +85,75 @@ const validatePassword = (password: string | null): string | null => {
     return null;
 }
 
-const login = () => {
+
+const encrypt = async (password: string, publicKey: string): Promise<string> => {
+    const encoded = new TextEncoder().encode(password);
+    const header = "-----BEGIN PUBLIC KEY-----";
+    const footer = "-----END PUBLIC KEY-----";
+    const base64Data = publicKey.replace(header, "").replace(footer, "").trim();
+    const binaryData = window.atob(base64Data);
+    const publicKeyBytes = new Uint8Array(binaryData.length);
+    for (let i = 0; i < binaryData.length; i++) {
+        publicKeyBytes[i] = binaryData.charCodeAt(i);
+    }
+    const key = await window.crypto.subtle.importKey(
+        "spki",
+        publicKeyBytes.buffer,
+        { 
+            name: "RSA-OAEP",
+            hash: "SHA-256"
+        },
+        false,
+        ["encrypt"]
+    );
+    const encrypted = await window.crypto.subtle.encrypt(
+        {
+            name: 'RSA-OAEP'
+        },
+        key,
+        encoded
+    );
+    // 转为base64
+    return window.btoa(Array.from(new Uint8Array(encrypted)).map(b => String.fromCharCode(b)).join(''));
+};
+
+
+const click_login = async () => {
     formErrors.value.username = validateUsername(form.value.username);
     formErrors.value.password = validatePassword(form.value.password);
+    // 表单验证不通过终止后续操作
+    if (formErrors.value.username || formErrors.value.password) {
+        return;
+    }
+    // 密码为空终止后续操作
+    if (form.value.password == null) {
+        return;
+    }
+    // 用户名为空终止后续操作
+    if (form.value.username == null) {
+        return; 
+    }
     // 获取加密的kid和公钥
+    const publicKeyResponse = await getPublicKey();
+    if (publicKeyResponse.error) {
+        formErrors.value.login = publicKeyResponse.error.message;
+    } else if (publicKeyResponse.data != null) {
+        // RSA公钥加密密码, 填充模式为OAEP SHA-256
+        const { kid, public_key } = publicKeyResponse.data;
+        const password = await encrypt(form.value.password, public_key);
+        const payload = {
+            kid: kid,
+            username: form.value.username,
+            password: password,
+        }
+        // 请求登录接口
+        const loginResponse = await login(payload);
+        if (loginResponse.error) {
+            formErrors.value.login = loginResponse.error.message;
+        } else {
+            // 登录成功后跳转
+            router.push("/home");
+        }
+    }
 }
-
 </script>

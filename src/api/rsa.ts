@@ -1,30 +1,18 @@
-import { createFetch } from '@vueuse/core'
+import { Fetch, FetchResponse, buildFetchResponse } from '../request/fetch'
 
 
-const Errors = new Map<number, Error>([
-    [500, Error("服务器正在开小差~~")],
-])
+interface PublicKey {
+    kid: string,
+    public_key: string,
+}
 
 
-const rsaFetch = createFetch({
-    baseUrl: import.meta.env.VITE_API_HOST + "/rsa",
-    combination: 'overwrite',
-    options: {
-        async beforeFetch({ options }) {
-            return { options }
-        },
-        timeout: 300,
-        onFetchError(ctx) {
-            let errorCode: number = 500
-            if (ctx.response && ctx.data.code && Errors.has(ctx.data.code)) {
-                errorCode = ctx.data.code
-            }
-            return {
-                error: Errors.get(errorCode),
-                data: ctx.data,
-            }
-        },
-    },
-})
-
-
+/**
+ * 获取公钥
+ *
+ * @returns 包含错误信息和公钥数据的对象
+ */
+export async function getPublicKey(): Promise<FetchResponse<PublicKey>> {
+    const response = await Fetch<PublicKey>("rsa").get().json()
+    return buildFetchResponse<PublicKey>(response);
+}
