@@ -1,25 +1,28 @@
 
 <template>
-    <div>
-        <form>
-            <div>
-                <div>账号</div>
-                <input type="text" v-model="form.username" placeholder="请输入账号">
-                <!-- 提示信息 -->
-                <div v-if="formErrors.username"> {{ formErrors.username }} </div>
+    <div class="box">
+        <form class="form-box">
+            <div class="input-box">
+                <input class="input-text" type="text" v-model="form.username" placeholder="用户名" oninput="value=value.replace(/[^a-zA-Z0-9]/g, '')">
+                <transition name="fade">
+                    <div v-if="formErrors.username" class="err_msg"> {{ formErrors.username }} </div>
+                </transition>
             </div>
-            <div>
-                <div>密码</div>
-                <input type="password" v-model="form.password" placeholder="请输入密码">
-                <!-- 提示信息 -->
-                <div v-if="formErrors.password"> {{ formErrors.password }} </div>
+            <div class="input-box">
+                <input class="input-text" type="password" v-model="form.password" placeholder=" 密码">
+                <transition name="fade">
+                    <div v-if="formErrors.password" class="err_msg"> {{ formErrors.password }} </div>
+                </transition>
             </div>
             <!-- TODO ylei 验证码 -->
-            <div>
-                <div @click="click_login">登录</div>
-                <div @click="click_register">注册</div>
-                <!-- 提示信息 -->
-                <div v-if="formErrors.login"> {{ formErrors.login }} </div>
+            <div class="input-box">
+                <div class="btn-box">
+                    <div @click="click_login" class="btn">登录</div>
+                    <div @click="click_register" class="btn">注册</div>
+                </div>
+                <transition name="fade">
+                    <div v-if="formErrors.login" class="err_msg"> {{ formErrors.login }} </div>
+                </transition>
             </div>
         </form>
     </div>
@@ -47,8 +50,8 @@ interface FormErrors {
 }
 // 表单数据
 const form: Ref<Form> = ref({
-    username: "test01",
-    password: "123456",
+    username: null,
+    password: null,
 })
 // 收集验证表单的错误
 const formErrors: Ref<FormErrors> = ref({
@@ -56,13 +59,12 @@ const formErrors: Ref<FormErrors> = ref({
     password: null,
     login: null,
 })
-
 // 动态验证表单
 const validateUsername = (username: string | null): string | null => {
     if (username === null) {
         return "用户名不能为空";
     }
-    // 验证用户名必须是字母开头
+    // 验证用户名必须是字母开头且只包含字母数字
     if (!/^[a-zA-Z]/.test(username)) {
         return "用户名必须以字母开头";
     }
@@ -127,10 +129,14 @@ const encrypt = async (password: string): Promise<Array<string>> => {
 };
 
 const validate = (): boolean => {
+    // 过滤掉用户名中非字母和数字的字符
     formErrors.value.username = validateUsername(form.value.username);
-    formErrors.value.password = validatePassword(form.value.password);
     // 表单验证不通过终止后续操作
-    if (formErrors.value.username || formErrors.value.password) {
+    if (formErrors.value.username) {
+        return false;
+    }
+    formErrors.value.password = validatePassword(form.value.password);
+    if (formErrors.value.password) {
         return false;
     }
     return true;
@@ -202,8 +208,96 @@ const click_register = async () => {
             password: null,
             login: null,
         };
-        // 登录成功后跳转登录页面
+        // 注册成功后跳转
         router.push("/");
     }
 }
 </script>
+
+<style scoped>
+    .box {
+        display: flex;
+        width: 100vm;
+        height: 100vh;
+        justify-content: center; /* 水平居中 */
+        align-items: center; /* 垂直居中 */
+        background-image: url("../assets/login/back.png");
+        background-size: cover;
+        background-position: center;
+    }
+    .form-box {
+        display: flex;
+        flex-direction: column;
+        justify-content: center; /* 水平居中 */
+        align-items: center; /* 垂直居中 */
+        width: 40%;
+        height: 60%;
+        background-image: url("../assets/login/back.png");
+        background-size: cover;
+        background-position: center;
+        border-radius: 0.625rem;
+    }
+    .input-box{
+        width: 35%;
+        height: 12%;
+    }
+    .err_msg {
+        width: 100%;
+        height: 35%;
+        font-size: 0.9rem;
+        padding-left: 4%;
+    }
+    .fade-enter-active, .fade-leave-active {
+        transition: opacity 0.5s;
+    }
+    .fade-enter, .fade-leave-to {
+        opacity: 0;
+    }
+    .input-text {
+        width: 100%;
+        height: 65%;
+        padding: 0.625rem;
+        font-size: 1rem;
+        border-radius: 0.625rem;
+        background-color: transparent;
+        backdrop-filter: blur(1.5rem);
+        border: 0.1rem solid #282626;
+        border-bottom: 0.1rem solid #282626;
+        outline: none; /* 移除聚焦时的默认轮廓线 */
+        transition: border-bottom-width 0.1s; /* 定义边框宽度变化的动画 */
+    }
+    .input-text:focus {
+        border-bottom-width: 0.125rem; /* 聚焦时下边框加粗 */
+    }
+    .input-text::placeholder {
+        color: #282626; /* 占位符颜色 */
+        font-size: 0.9rem;
+    }
+    .btn-box {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+    }
+    .btn {
+        display: flex;
+        width: 48%;
+        height: 60%;
+        justify-content: center;
+        align-items: center;
+        color:  #282626;
+        background-color: #e8a57f;
+        border-radius: 0.625rem;
+        text-align: center;
+        font-size: 1rem;
+        border: 0.1rem solid #b58181;
+        cursor: pointer;
+        text-decoration: none;
+        transition: transform 0.3s;
+    }
+    .btn:active {
+        transform: scale(0.95);
+    }
+</style>
