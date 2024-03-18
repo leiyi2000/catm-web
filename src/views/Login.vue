@@ -217,7 +217,7 @@ const click_register = async () => {
 <style scoped>
     .box {
         display: flex;
-        width: 100vm;
+        width: 100vw;
         height: 100vh;
         justify-content: center; /* 水平居中 */
         align-items: center; /* 垂直居中 */

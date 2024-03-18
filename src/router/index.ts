@@ -11,7 +11,12 @@ const routes = [
         path: "/home",
         name: "home",
         component: () => import("../views/Home.vue")
-    }
+    },
+    // {
+    //     path: "/test",
+    //     name: "test",
+    //     component: () => import("../components/UploadImage.vue")
+    // }
 ]
 
 const router = createRouter({

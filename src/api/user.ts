@@ -22,6 +22,11 @@ export interface User {
 }
 
 
+export interface UserAvatar {
+    avatar_base64: string,
+}
+
+
 export async function login(payload: LoginPayload): Promise<FetchResponse<User>> {
     const response = await Fetch<User>("user/login").post(payload).json()
     return buildFetchResponse<User>(response)
@@ -34,7 +39,13 @@ export async function getLoginUser(): Promise<FetchResponse<User>> {
 }
 
 
-export async function register(payload: RegisterPayload) {
+export async function register(payload: RegisterPayload): Promise<FetchResponse<User>> {
     const response = await Fetch<User>("user").post(payload).json()
     return buildFetchResponse<User>(response)
+}
+
+
+export async function getAvatar(user_id: string): Promise<FetchResponse<UserAvatar>> {
+    const response = await Fetch<User>("user/avatar/" + user_id).get().json()
+    return buildFetchResponse<UserAvatar>(response)
 }
