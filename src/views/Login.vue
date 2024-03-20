@@ -17,8 +17,8 @@
             <!-- TODO ylei 验证码 -->
             <div class="input-box">
                 <div class="btn-box">
-                    <div @click="click_login" class="btn">登录</div>
-                    <div @click="click_register" class="btn">注册</div>
+                    <div @click="clickLogin" class="btn">登录</div>
+                    <div @click="clickRegister" class="btn">注册</div>
                 </div>
                 <transition name="fade">
                     <div v-if="formErrors.login" class="err_msg"> {{ formErrors.login }} </div>
@@ -142,7 +142,7 @@ const validate = (): boolean => {
     return true;
 }
 
-const click_login = async () => {
+const clickLogin = async () => {
     if (!validate()) {
         return;
     }
@@ -173,7 +173,7 @@ const click_login = async () => {
     }
 }
 
-const click_register = async () => {
+const clickRegister = async () => {
     if (!validate()) {
         return;
     }

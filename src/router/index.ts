@@ -3,20 +3,20 @@ import { createRouter, createWebHistory } from "vue-router";
 
 const routes = [
     {
-        path: "/",
+        path: "/login",
         name: "login",
         component: () => import("../views/Login.vue")
     },
     {
-        path: "/home",
+        path: "/",
         name: "home",
         component: () => import("../views/Home.vue")
     },
-    {
-        path: "/test",
-        name: "test",
-        component: () => import("../components/UploadImage.vue")
-    }
+    // {
+    //     path: "/test",
+    //     name: "test",
+    //     component: () => import("../components/Message.vue")
+    // },
 ]
 
 const router = createRouter({

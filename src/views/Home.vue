@@ -1,9 +1,10 @@
 <template>
+    <Message ref="message"></Message>
     <div class="nav">
         <!-- 头像 -->
         <img v-if="user.avatar" :src=user.avatar @click="toggleFeature" alt="头像" class="avatar">
         <!-- 点击下拉菜单 -->
-        <div v-if="showFeature">
+        <div v-if="state.showFeature">
             <ul>
                 <li>上传音乐</li>
                 <li @click="toggleUploadAvatar">修改头像</li>
@@ -16,12 +17,24 @@
             <input type="text">
         </div>
     </div>
+    <div v-if="state.showUploadAvatar" class="upload-box">
+        <UploadImage
+            :submit="uploadAvatar"
+            :height="300"
+            :width="300"
+            :radius="50"
+        >
+        </UploadImage>
+    </div>
+    <div class="bg" v-if="state.showUploadAvatar"></div>
 </template>
 
 <script setup lang="ts">
 import { Ref, onMounted, ref } from "vue";
 
-import { getLoginUser, getAvatar } from "../api/user";
+import Message from "../components/Message.vue";
+import UploadImage from "../components/UploadImage.vue";
+import { readLoginUser, readAvatar, createAvatar } from "../api/user";
 
 
 interface User {
@@ -32,8 +45,18 @@ interface User {
     avatar: string;
 }
 
-const showFeature: Ref<boolean> = ref(false);
-const showUploadAvatar: Ref<boolean> = ref(false);
+interface State {
+    // 控制是否点击头像展示功能列表
+    showFeature: boolean;
+    // 控制点击修改按钮, 弹出头像上传组件
+    showUploadAvatar: boolean;
+}
+
+const message: Ref<any> = ref(null);
+const state: Ref<State> = ref({
+    showFeature: false,
+    showUploadAvatar: false,
+})
 const user: Ref<User> = ref<User>({
     id: null,
     username: null,
@@ -44,11 +67,12 @@ const user: Ref<User> = ref<User>({
 
 // 点击关闭或者展示功能列表
 const toggleFeature = () => {
-    showFeature.value = !showFeature.value;
+    state.value.showFeature = !state.value.showFeature;
 }
 
 const toggleUploadAvatar = () => {
-    showUploadAvatar.value = !showUploadAvatar.value;
+    console.log(state.value.showUploadAvatar);
+    state.value.showUploadAvatar = !state.value.showUploadAvatar;
 }
 
 // 根据用户名生成头像
@@ -80,10 +104,10 @@ function generateAvatar(username: string, size: number = 200): string {
 }
 
 // 加载用户头像
-const loadUserAvatar = async (username: string, user_id: string) => {
-    const avatarResponse = await getAvatar(user_id); 
+const loadAvatar = async (username: string, user_id: string) => {
+    const avatarResponse = await readAvatar(user_id); 
     if (avatarResponse.data) {
-        user.value.avatar = avatarResponse.data.avatar_base64;
+        user.value.avatar = avatarResponse.data;
     } else {
         // 根据用户名生成头像
         user.value.avatar = generateAvatar(username);
@@ -92,15 +116,32 @@ const loadUserAvatar = async (username: string, user_id: string) => {
 
 // 加载的时候加载用户信息
 const loadLoginUser = async () => {
-    const loginUserResponse = await getLoginUser()
+    const loginUserResponse = await readLoginUser()
     if (loginUserResponse.data) {
         Object.assign(user.value, loginUserResponse.data);
     }
     // 用户头像
     if (user.value.id && user.value.username) {
-        await loadUserAvatar(user.value.username, user.value.id);
+        await loadAvatar(user.value.username, user.value.id);
     }
 }
+
+// 上传头像
+const uploadAvatar = async (avatar: string) => {
+    const avatarResponse = await createAvatar(avatar);
+    if (avatarResponse.error && message.value) {
+        // 上传失败弹出消息盒子, 提醒用户
+        message.value.showMessage(avatarResponse.error.message);
+    } else if (avatarResponse.error == null) {
+        // 上传头像成功z
+        message.value.showMessage("上传成功");
+        // 刷新页面
+        setTimeout(() => {
+            location.reload();
+        }, 1000)
+    }
+}
+
 // 加载的时候加载用户信息
 onMounted(loadLoginUser);
 </script>
@@ -122,5 +163,30 @@ onMounted(loadLoginUser);
         position: absolute;
         right: 1.25rem; /* 距离右侧边缘的距离 */
         cursor: pointer;
+    }
+    /* 修改头像弹框 */
+    .upload-box {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 25rem;
+        height: 26rem;;
+        position: fixed;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 9999;
+        background: #FFC0CB;
+        border-radius: 2%;
+    }
+    /* 遮盖层 */
+    .bg {
+        width: 100vw;
+        height: 100vh;
+        position: fixed;
+        top: 0px;
+        left: 0px;
+        background: rgb(0, 0, 0, .4);
+        z-index: 9998;
     }
 </style>

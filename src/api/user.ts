@@ -22,18 +22,13 @@ export interface User {
 }
 
 
-export interface UserAvatar {
-    avatar_base64: string,
-}
-
-
 export async function login(payload: LoginPayload): Promise<FetchResponse<User>> {
     const response = await Fetch<User>("user/login").post(payload).json()
     return buildFetchResponse<User>(response)
 }
 
 
-export async function getLoginUser(): Promise<FetchResponse<User>> {
+export async function readLoginUser(): Promise<FetchResponse<User>> {
     const response = await Fetch<User>("user").get().json()
     return buildFetchResponse<User>(response)
 }
@@ -45,7 +40,13 @@ export async function register(payload: RegisterPayload): Promise<FetchResponse<
 }
 
 
-export async function getAvatar(user_id: string): Promise<FetchResponse<UserAvatar>> {
-    const response = await Fetch<User>("user/avatar/" + user_id).get().json()
-    return buildFetchResponse<UserAvatar>(response)
+export async function readAvatar(user_id: string): Promise<FetchResponse<string>> {
+    const response = await Fetch<string>("user/avatar/" + user_id).get().json()
+    return buildFetchResponse<string>(response)
+}
+
+
+export async function createAvatar(imageBase64: string) {
+    const response = await Fetch<string>("user/avatar").post(imageBase64).json();
+    return buildFetchResponse<string>(response)
 }

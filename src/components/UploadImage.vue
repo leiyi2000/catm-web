@@ -1,29 +1,54 @@
 <template>
-    <div class="box">
-        <canvas
-            ref="canvas"
-            class="canvas"
-            :width="canvasWidth"
-            :height="canvasHeight"
-            @click="triggerFileUpload"
-            @mousedown="handleMouseDown" 
-            @mousemove="handleMouseMove" 
-            @mouseup="handleMouseUp" 
-            @mouseleave="handleMouseUp" 
-            @wheel="handleWheel"
-            @dragover.prevent="handleDragOver"
-            @drop.prevent="handleDrop"
-        >
-        </canvas>
-        <p v-if="!image" class="upload-text">点击或者拖动图片上传</p>
-        <!-- 隐藏的文件输入元素 -->
-        <input type="file" ref="fileInput" @change="handleFileChange($event)" style="display: none;" multiple />
+    <div>
+        <div class="image-box">
+            <canvas
+                ref="canvas"
+                class="canvas"
+                :width="canvasWidth"
+                :height="canvasHeight"
+                @click="triggerFileUpload"
+                @mousedown="handleMouseDown"
+                @mousemove="handleMouseMove"
+                @mouseup="handleMouseUp"
+                @mouseleave="handleMouseUp"
+                @wheel="handleWheel"
+                @dragover.prevent="handleDragOver"
+                @drop.prevent="handleDrop"
+            >
+            </canvas>
+            <p v-if="!image" class="upload-text" @click="triggerFileUpload">点击或者拖动图片上传</p>
+            <!-- 隐藏的文件输入元素 -->
+            <input type="file" ref="fileInput" @change="handleFileChange($event)" style="display: none;" multiple />
+        </div>
+        <div class="btn-box">
+            <div class="btn" @click="clickSubmit">上传</div>
+            <div class="btn btn-red" @click="clearImage">清除</div>
+        </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import { Ref, ref } from 'vue';
 
+
+const props = defineProps({
+    width: {
+        type: Number,
+        default: 300
+    },
+    height: {
+        type: Number,
+        default: 300
+    },
+    radius: {
+        type: Number,
+        default: 0
+    },
+    submit: {
+        type: Function,
+        required: true,
+    }
+})
 
 interface CanvasState {
     isDragging: boolean;
@@ -35,8 +60,9 @@ interface CanvasState {
 }
 
 // 图片base64
-const canvasWidth: number = 300;
-const canvasHeight: number = 300;
+const canvasWidth: number = props.height.valueOf();
+const canvasHeight: number = props.width.valueOf();
+const canvasRadius: number = props.radius.valueOf();
 const image: Ref<ImageBitmap | null> = ref(null);
 const fileInput: Ref<HTMLInputElement | null> = ref(null);
 const canvas: Ref<HTMLCanvasElement | null> = ref(null);
@@ -143,7 +169,7 @@ const triggerFileUpload = () => {
     }
 };
 
-// 点击上传文件
+// 点击加载文件
 const handleFileChange = (event: Event) => {
     if (!event?.target) {
         return;
@@ -208,10 +234,37 @@ const handleWheel = (event: WheelEvent) => {
     canvasState.value.scale = Math.max(0.1, Math.min(10, scale + delta))
     drawImage()
 }
+
+// 点击上传文件
+const clickSubmit = async () => {
+    if (props.submit && image.value != null) {
+        const imageBase64 = canvas.value?.toDataURL();  
+        return await props.submit(imageBase64);
+    }
+}
+
+// 清除图片
+const clearImage = () => {
+    canvasState.value = {
+        isDragging: false,
+        lastX: 0,
+        lastY: 0,
+        offsetX: 0,
+        offsetY: 0,
+        scale: 1
+    };
+    image.value = null;
+    canvasCtx?.clearRect(0, 0, canvasWidth, canvasHeight);
+    // 清空input file
+    if (fileInput.value) {
+        fileInput.value.value = "";
+    }
+}
+
 </script>
 
 <style scoped>
-    .box {
+    .image-box {
         display: flex;
         position: relative;
         align-items: center;
@@ -220,14 +273,43 @@ const handleWheel = (event: WheelEvent) => {
         height: v-bind(canvasHeight + "px");
         background-color: #ede4e4;
         cursor: pointer;
+        border-radius: v-bind(canvasRadius + "%");
     }
     .canvas {
         position: absolute;
+        border-radius: v-bind(canvasRadius + "%");
     }
     .upload-text {
         text-align: center;
         font-size: 1rem;
         color: #999;
         z-index: 1;
+    }
+    .btn-box {
+        display: flex;
+        color: #201f1f;
+        align-items: center;
+        justify-content: center;
+        background-color: transparent;
+        justify-content: space-between;
+        width: v-bind(canvasWidth + "px");
+        height: v-bind(canvasHeight / 6 + "px");
+    }
+    .btn {
+        width: 6rem;
+        height: 2rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #6586f0;
+        transition: transform 0.3s;
+        border-radius: 0.25rem;
+    }
+    .btn-red {
+        background-color: #f74444;
+    }
+    .btn:active {
+        transform: scale(0.95);
     }
 </style>
