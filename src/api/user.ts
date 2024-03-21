@@ -28,6 +28,12 @@ export async function login(payload: LoginPayload): Promise<FetchResponse<User>>
 }
 
 
+export async function logout(): Promise<FetchResponse<string>> {
+    const response = await Fetch<string>("user/logout").get().json()
+    return buildFetchResponse<string>(response)
+}
+
+
 export async function readLoginUser(): Promise<FetchResponse<User>> {
     const response = await Fetch<User>("user").get().json()
     return buildFetchResponse<User>(response)

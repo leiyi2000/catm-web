@@ -237,7 +237,9 @@ const handleWheel = (event: WheelEvent) => {
 
 // 点击上传文件
 const clickSubmit = async () => {
-    if (props.submit && image.value != null) {
+    if (image.value == null) {
+        triggerFileUpload()
+    } else if (props.submit && image.value != null) {
         const imageBase64 = canvas.value?.toDataURL();  
         return await props.submit(imageBase64);
     }

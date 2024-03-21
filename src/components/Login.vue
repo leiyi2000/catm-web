@@ -1,31 +1,41 @@
-
 <template>
-    <div class="box">
-        <form class="form-box">
-            <div class="input-box">
-                <input class="input-text" type="text" v-model="form.username" placeholder="用户名" oninput="value=value.replace(/[^a-zA-Z0-9]/g, '')">
-                <transition name="fade">
-                    <div v-if="formErrors.username" class="err_msg"> {{ formErrors.username }} </div>
-                </transition>
+    <form class="form-box">
+        <div class="input-box">
+            <input class="input-text" type="text" v-model="form.username" placeholder="用户名" oninput="value=value.replace(/[^a-zA-Z0-9]/g, '')">
+            <transition name="fade">
+                <div v-show="formErrors.username" class="err_msg"> {{ formErrors.username }} </div>
+            </transition>
+        </div>
+        <div class="input-box">
+            <input class="input-text" type="password" v-model="form.password" placeholder=" 密码" autocomplete="on">
+            <transition name="fade">
+                <div v-show="formErrors.password" class="err_msg"> {{ formErrors.password }} </div>
+            </transition>
+        </div>
+        <div v-show="mode == Mode.Modify" class="input-box">
+            <input class="input-text" type="password" v-model="form.newPassword" placeholder=" 新密码" autocomplete="off">
+            <transition name="fade">
+                <div v-show="formErrors.newPassword" class="err_msg"> {{ formErrors.newPassword }} </div>
+            </transition>
+        </div>
+        <div v-show="mode == Mode.Register || mode == Mode.Modify" class="input-box">
+            <input class="input-text" type="password" v-model="form.confirmPassword" placeholder=" 确认密码" autocomplete="off">
+            <transition name="fade">
+                <div v-show="formErrors.confirmPassword" class="err_msg"> {{ formErrors.confirmPassword }} </div>
+            </transition>
+        </div>
+        <!-- TODO ylei 验证码 -->
+        <div class="input-box">
+            <div class="btn-box">
+                <div v-show="mode == Mode.Modify"  @click="clickModify" class="btn">确认修改</div>
+                <div v-show="mode != Mode.Modify" @click="clickLogin" class="btn">登录</div>
+                <div v-show="mode != Mode.Modify" @click="clickRegister" class="btn">注册</div>
             </div>
-            <div class="input-box">
-                <input class="input-text" type="password" v-model="form.password" placeholder=" 密码">
-                <transition name="fade">
-                    <div v-if="formErrors.password" class="err_msg"> {{ formErrors.password }} </div>
-                </transition>
-            </div>
-            <!-- TODO ylei 验证码 -->
-            <div class="input-box">
-                <div class="btn-box">
-                    <div @click="clickLogin" class="btn">登录</div>
-                    <div @click="clickRegister" class="btn">注册</div>
-                </div>
-                <transition name="fade">
-                    <div v-if="formErrors.login" class="err_msg"> {{ formErrors.login }} </div>
-                </transition>
-            </div>
-        </form>
-    </div>
+            <transition name="fade">
+                <div v-show="formErrors.login" class="err_msg"> {{ formErrors.login }} </div>
+            </transition>
+        </div>
+    </form>
 </template>
 
 
@@ -38,27 +48,50 @@ import { login, register } from "../api/user";
 import router from "../router";
 
 
+// 暴露出去的参数
+const props = defineProps<{
+    username: string | null,
+    mode: string,
+}>()
+
 interface Form {
     username: string | null,
     password: string | null,
+    newPassword: string | null,
+    confirmPassword: string | null,
 }
 
 interface FormErrors {
     username: string | null,
     password: string | null,
+    confirmPassword: string | null,
+    newPassword: string | null,
     login: string | null,
 }
+
+enum Mode {
+    Login = "login",
+    Register = "register",
+    Modify = "modify",
+}
+
 // 表单数据
 const form: Ref<Form> = ref({
-    username: null,
+    username: props.username,
     password: null,
+    newPassword: null,
+    confirmPassword: null,
 })
 // 收集验证表单的错误
 const formErrors: Ref<FormErrors> = ref({
     username: null,
     password: null,
+    newPassword: null,
+    confirmPassword: null,
     login: null,
 })
+// 标记是否未注册模式
+const mode: Ref<string> = ref(props.mode);
 // 动态验证表单
 const validateUsername = (username: string | null): string | null => {
     if (username === null) {
@@ -85,6 +118,30 @@ const validatePassword = (password: string | null): string | null => {
         return "密码必须大于6位";
     }
     return null;
+}
+
+const validate = (): boolean => {
+    // 过滤掉用户名中非字母和数字的字符
+    formErrors.value.username = validateUsername(form.value.username);
+    // 表单验证不通过终止后续操作
+    if (formErrors.value.username) {
+        return false;
+    }
+    formErrors.value.password = validatePassword(form.value.password);
+    if (formErrors.value.password) {
+        return false;
+    }
+    // 注册模式验证两次密码是否一致
+    if (mode.value == Mode.Register && form.value.password !== form.value.confirmPassword) {
+        formErrors.value.confirmPassword = "两次输入的密码不一致";
+        return false;
+    }
+    // 修改密码模式验证两次密码是否一致
+    if (mode.value == Mode.Modify && form.value.newPassword !== form.value.confirmPassword) {
+        formErrors.value.confirmPassword = "两次输入的密码不一致";
+        return false;
+    }
+    return true;
 }
 
 const encrypt = async (password: string): Promise<Array<string>> => {
@@ -126,23 +183,34 @@ const encrypt = async (password: string): Promise<Array<string>> => {
     );
     // 转为base64
     return [kid, window.btoa(Array.from(new Uint8Array(encrypted)).map(b => String.fromCharCode(b)).join(''))];
-};
+}
 
-const validate = (): boolean => {
-    // 过滤掉用户名中非字母和数字的字符
-    formErrors.value.username = validateUsername(form.value.username);
-    // 表单验证不通过终止后续操作
-    if (formErrors.value.username) {
-        return false;
+// 点击修改密码
+const clickModify = async () => {
+    if (mode.value != Mode.Modify) {
+        resetFormErrors();
+        mode.value = Mode.Modify;
+        return;
     }
-    formErrors.value.password = validatePassword(form.value.password);
-    if (formErrors.value.password) {
-        return false;
+}
+
+// 重置状态
+const resetFormErrors = () => {
+    formErrors.value = {
+        username: null,
+        password: null,
+        newPassword: null,
+        confirmPassword: null,
+        login: null,
     }
-    return true;
 }
 
 const clickLogin = async () => {
+    if (mode.value != Mode.Login) {
+        resetFormErrors();
+        mode.value = Mode.Login;
+        return;
+    }
     if (!validate()) {
         return;
     }
@@ -169,11 +237,20 @@ const clickLogin = async () => {
         formErrors.value.login = loginResponse.error.message;
     } else {
         // 登录成功后跳转
-        router.push("/home");
+        if (router.currentRoute.value.path === "/login") {
+            router.push("/");
+        } else {
+            router.go(0);
+        }
     }
 }
 
 const clickRegister = async () => {
+    if (mode.value != Mode.Register) {
+        resetFormErrors();
+        mode.value = Mode.Register;
+        return;
+    }
     if (!validate()) {
         return;
     }
@@ -202,44 +279,40 @@ const clickRegister = async () => {
         form.value = {
             username: null,
             password: null,
+            newPassword: null,
+            confirmPassword: null,
         };
-        formErrors.value = {
-            username: null,
-            password: null,
-            login: null,
-        };
-        // 注册成功后跳转
-        router.push("/");
+        resetFormErrors();        
+        // 注册成功后判断当前页是否为登录页，如果是则跳转首页否则刷新页面
+        if (router.currentRoute.value.path === "/login") {
+            router.push("/");
+        } else {
+            router.go(0);
+        }
     }
 }
+
+defineExpose({
+    Mode
+})
+
 </script>
 
 <style scoped>
-    .box {
-        display: flex;
-        width: 100vw;
-        height: 100vh;
-        justify-content: center; /* 水平居中 */
-        align-items: center; /* 垂直居中 */
-        background-image: url("../assets/login/back.png");
-        background-size: cover;
-        background-position: center;
-    }
     .form-box {
         display: flex;
         flex-direction: column;
         justify-content: center; /* 水平居中 */
         align-items: center; /* 垂直居中 */
-        width: 40%;
-        height: 60%;
-        background-image: url("../assets/login/back.png");
+        width: 100%;
+        height: 100%;
         background-size: cover;
         background-position: center;
         border-radius: 0.625rem;
     }
     .input-box{
-        width: 35%;
-        height: 12%;
+        width: 70%;
+        height: 20%;
     }
     .err_msg {
         width: 100%;
