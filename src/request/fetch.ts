@@ -1,6 +1,6 @@
 import { OnFetchErrorContext, UseFetchReturn, createFetch } from '@vueuse/core'
 
-import { Errors } from '../request/errors'
+import { Errors, HError, DEFAULT_ERROR } from '../request/errors'
 
 
 export const Fetch = createFetch({
@@ -17,13 +17,16 @@ export const Fetch = createFetch({
          * @param ctx 错误上下文
          * @returns 返回包含错误信息和原始数据的对象
          */
-        onFetchError(ctx): Promise<Partial<OnFetchErrorContext<any, Error>>> | Partial<OnFetchErrorContext<any, Error>> {
-            let errorCode: number = 500
+        onFetchError(ctx): Promise<Partial<OnFetchErrorContext<any, HError>>> | Partial<OnFetchErrorContext<any, HError>> {
+            let error: HError = DEFAULT_ERROR;
             if (ctx.data?.code && Errors.has(ctx.data.code)) {
-                errorCode = ctx.data.code
+                error = Errors.get(ctx.data.code)!;
+            }
+            if (error.handle) {
+                error.handle(ctx);
             }
             return {
-                error: Errors.get(errorCode),
+                error: error,
                 data: ctx.data,
             }
         },

@@ -9,7 +9,7 @@
             <div v-if="state.showFeature" class="feature-box">
                 <div>上传音乐</div>
                 <div @click="toggleUploadAvatar">修改头像</div>
-                <div>修改密码</div>
+                <div @click="clickModify">修改密码</div>
                 <div @click="clickLogout">退出登录</div>
             </div>
             <!-- 搜索框 -->
@@ -25,7 +25,6 @@
                 </div>
             </div>
         </div>
-        
         <div class="pop-box">
             <!-- 上传头像 -->
             <div v-show="state.showUploadAvatar" class="upload-box">
@@ -40,8 +39,8 @@
             <!-- 登录 -->
             <div class="login-box" v-show="state.showLogin">
                 <Login
+                    ref="loginHTML"
                     :username="''"
-                    :mode="'login'"
                 ></Login>
             </div>
         </div>
@@ -54,6 +53,7 @@ import { Ref, onMounted, ref } from "vue";
 
 import Login from "../components/Login.vue";
 import Message from "../components/Message.vue";
+import { clearStoreUser } from "../storage/user";
 import UploadImage from "../components/UploadImage.vue";
 import { readLoginUser, readAvatar, createAvatar, logout } from "../api/user";
 
@@ -77,7 +77,8 @@ interface State {
     showLogin: boolean;
 }
 
-const message: Ref<InstanceType<typeof Message> | null> = ref(null);
+const loginHTML: Ref<InstanceType<typeof Login> | null> = ref(null);
+const messageHTML: Ref<InstanceType<typeof Message> | null> = ref(null);
 const searchInputText: Ref<null | String> = ref(null);
 const state: Ref<State> = ref({
     showFeature: false,
@@ -101,13 +102,22 @@ const search = () => {
     }
 }
 
+// 点击修改密码
+const clickModify = () => {
+    if (loginHTML.value) {
+        loginHTML.value.mode = loginHTML.value.Mode.Modify;
+    }
+    clickLogin();
+}
+
 // 退出登录
 const clickLogout = async () => {
     const response = await logout();
-    if (response.error && message.value) {
-        message.value.showMessage(response.error.message);
+    if (response.error && messageHTML.value) {
+        messageHTML.value.showMessage(response.error.message);
     } else {
         // 重新加载页面
+        clearStoreUser();
         location.reload();
     }
 }
@@ -182,8 +192,8 @@ const loadAvatar = async (username: string, user_id: string) => {
     }
 }
 
-// 加载的时候加载用户信息
-const loadLoginUser = async () => {
+// 页面加载的初始化信息
+const init = async () => {
     const loginUserResponse = await readLoginUser()
     if (loginUserResponse.data) {
         Object.assign(user.value, loginUserResponse.data);
@@ -197,12 +207,12 @@ const loadLoginUser = async () => {
 // 上传头像
 const uploadAvatar = async (avatar: string) => {
     const avatarResponse = await createAvatar(avatar);
-    if (avatarResponse.error && message.value) {
+    if (avatarResponse.error && messageHTML.value) {
         // 上传失败弹出消息盒子, 提醒用户
-        message.value.showMessage(avatarResponse.error.message);
-    } else if (avatarResponse.error == null && message.value) {
+        messageHTML.value.showMessage(avatarResponse.error.message);
+    } else if (avatarResponse.error == null && messageHTML.value) {
         // 上传头像成功z
-        message.value.showMessage("上传成功");
+        messageHTML.value.showMessage("上传成功");
         // 刷新页面
         setTimeout(() => {
             location.reload();
@@ -211,7 +221,7 @@ const uploadAvatar = async (avatar: string) => {
 }
 
 // 加载的时候加载用户信息
-onMounted(loadLoginUser);
+onMounted(init);
 </script>
 <style scoped>
     .main-box {
@@ -236,8 +246,8 @@ onMounted(loadLoginUser);
         align-items: center;
     }
     .login-box {
-        width: 30%;
-        height: 50%;
+        width: 25%;
+        height: 40%;
         background-image: url("../assets/login/back.png");
         border-radius: 2%;
         z-index: 3;

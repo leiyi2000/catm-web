@@ -13,6 +13,7 @@
     "axios": "^1.6.7",
     "babel-core": "^6.26.3",
     "default-passive-events": "^2.0.0",
+    "mitt": "^3.0.1",
     "sass": "^1.71.1",
     "sass-loader": "^14.1.1",
     "vue": "^3.3.11",

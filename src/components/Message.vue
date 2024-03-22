@@ -23,6 +23,7 @@ const showMessage = (msg: string) => {
 defineExpose({
     showMessage
 })
+
 </script>
 
 <style scoped>

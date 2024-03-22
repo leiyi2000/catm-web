@@ -40,19 +40,14 @@
 
 
 <script setup lang="ts">
-import { ref } from "vue";
 import type { Ref } from 'vue'
+import { ref, watch } from "vue";
 
+import router from "../router";
 import { getPublicKey } from "../api/rsa";
 import { login, register } from "../api/user";
-import router from "../router";
+import { storeUser, getStoreUser } from "../storage/user";
 
-
-// 暴露出去的参数
-const props = defineProps<{
-    username: string | null,
-    mode: string,
-}>()
 
 interface Form {
     username: string | null,
@@ -77,7 +72,7 @@ enum Mode {
 
 // 表单数据
 const form: Ref<Form> = ref({
-    username: props.username,
+    username: null,
     password: null,
     newPassword: null,
     confirmPassword: null,
@@ -91,7 +86,15 @@ const formErrors: Ref<FormErrors> = ref({
     login: null,
 })
 // 标记是否未注册模式
-const mode: Ref<string> = ref(props.mode);
+const mode: Ref<Mode> = ref(Mode.Login);
+// 如果是修改密码模式，则从本地获取用户信息
+watch(mode, (newValue, _oldValue) => {
+    if (newValue == Mode.Modify) {
+        const {username} = getStoreUser();
+        form.value.username = username;
+    }
+})
+
 // 动态验证表单
 const validateUsername = (username: string | null): string | null => {
     if (username === null) {
@@ -192,6 +195,9 @@ const clickModify = async () => {
         mode.value = Mode.Modify;
         return;
     }
+    if (!validate() || form.value.password == null || form.value.username == null || form.value.newPassword == null) {
+        return;
+    }
 }
 
 // 重置状态
@@ -211,15 +217,7 @@ const clickLogin = async () => {
         mode.value = Mode.Login;
         return;
     }
-    if (!validate()) {
-        return;
-    }
-    // 密码为空终止后续操作
-    if (form.value.password == null) {
-        return;
-    }
-    // 用户名为空终止后续操作
-    if (form.value.username == null) {
+    if (!validate() || form.value.password == null || form.value.username == null) {
         return;
     }
     const [kid, password] = await encrypt(form.value.password);
@@ -235,13 +233,10 @@ const clickLogin = async () => {
     const loginResponse = await login(payload);
     if (loginResponse.error) {
         formErrors.value.login = loginResponse.error.message;
-    } else {
-        // 登录成功后跳转
-        if (router.currentRoute.value.path === "/login") {
-            router.push("/");
-        } else {
-            router.go(0);
-        }
+    } else if (loginResponse.data) {
+        // 登录成功用户信息存localStore
+        storeUser(loginResponse.data);
+        router.go(0);
     }
 }
 
@@ -251,15 +246,7 @@ const clickRegister = async () => {
         mode.value = Mode.Register;
         return;
     }
-    if (!validate()) {
-        return;
-    }
-    // 密码为空终止后续操作
-    if (form.value.password == null) {
-        return;
-    }
-    // 用户名为空终止后续操作
-    if (form.value.username == null) {
+    if (!validate() || form.value.password == null || form.value.username == null) {
         return;
     }
     const [kid, password] = await encrypt(form.value.password);
@@ -275,24 +262,22 @@ const clickRegister = async () => {
     const registerResponse = await register(payload);
     if (registerResponse.error) {
         formErrors.value.login = registerResponse.error.message;
-    } else {
+    } else if (registerResponse.data) {
         form.value = {
             username: null,
             password: null,
             newPassword: null,
             confirmPassword: null,
         };
-        resetFormErrors();        
-        // 注册成功后判断当前页是否为登录页，如果是则跳转首页否则刷新页面
-        if (router.currentRoute.value.path === "/login") {
-            router.push("/");
-        } else {
-            router.go(0);
-        }
+        resetFormErrors();
+        storeUser(registerResponse.data);
+        router.go(0);
     }
 }
 
 defineExpose({
+    form,
+    mode,
     Mode
 })
 
@@ -311,8 +296,8 @@ defineExpose({
         border-radius: 0.625rem;
     }
     .input-box{
-        width: 70%;
-        height: 20%;
+        width: 60%;
+        height: 18%;
     }
     .err_msg {
         width: 100%;
