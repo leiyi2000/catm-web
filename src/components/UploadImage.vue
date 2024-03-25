@@ -16,7 +16,7 @@
                 @drop.prevent="handleDrop"
             >
             </canvas>
-            <p v-if="!image" class="upload-text" @click="triggerFileUpload">点击或者拖动图片上传</p>
+            <p v-show="!image" class="upload-text" @click="triggerFileUpload">点击或者拖动图片上传</p>
             <!-- 隐藏的文件输入元素 -->
             <input type="file" ref="fileInput" @change="handleFileChange($event)" style="display: none;" multiple />
         </div>

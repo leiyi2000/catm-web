@@ -4,9 +4,12 @@ import { clearStoreUser } from "../storage/user";
 export class HError {
     message: string;
     handle: Function | null;
-    constructor(message: string, handle: Function | null = null) {
+    redirect: string | null;
+
+    constructor(message: string, handle: Function | null = null, redirect: string | null = null) {
         this.message = message;
         this.handle = handle;
+        this.redirect = redirect;
     }
 }
 

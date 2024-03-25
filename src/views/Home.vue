@@ -1,12 +1,12 @@
 <template>
-    <Message ref="message"></Message>
+    <Message ref="messageHTML"></Message>
     <div class="main-box">
         <div class="nav">
             <!-- 头像 -->
-            <img v-if="user.avatar" :src=user.avatar @click="toggleFeature" alt="头像" class="avatar">
-            <button v-if="!user.id" class="btn-login" @click="clickLogin">登录</button>
+            <img v-show="user.avatar" :src=user.avatar @click="toggleFeature" alt="头像" class="avatar">
+            <button v-show="!user.id" class="btn-login" @click="clickLogin">登录</button>
             <!-- 点击下拉菜单 -->
-            <div v-if="state.showFeature" class="feature-box">
+            <div v-show="state.showFeature" class="feature-box">
                 <div>上传音乐</div>
                 <div @click="toggleUploadAvatar">修改头像</div>
                 <div @click="clickModify">修改密码</div>
@@ -44,7 +44,7 @@
                 ></Login>
             </div>
         </div>
-        <div class="bg" v-if="state.showUploadAvatar || state.showLogin"></div>
+        <div class="bg" v-show="state.showUploadAvatar || state.showLogin"></div>
     </div>
 </template>
 
@@ -79,6 +79,7 @@ interface State {
 
 const loginHTML: Ref<InstanceType<typeof Login> | null> = ref(null);
 const messageHTML: Ref<InstanceType<typeof Message> | null> = ref(null);
+
 const searchInputText: Ref<null | String> = ref(null);
 const state: Ref<State> = ref({
     showFeature: false,
@@ -110,12 +111,10 @@ const clickModify = () => {
     clickLogin();
 }
 
-// 退出登录
+// 退出登录 
 const clickLogout = async () => {
-    const response = await logout();
-    if (response.error && messageHTML.value) {
-        messageHTML.value.showMessage(response.error.message);
-    } else {
+    const response = await logout(messageHTML);
+    if (response.data) {
         // 重新加载页面
         clearStoreUser();
         location.reload();
@@ -192,6 +191,19 @@ const loadAvatar = async (username: string, user_id: string) => {
     }
 }
 
+// 上传头像
+const uploadAvatar = async (avatar: string) => {
+    const avatarResponse = await createAvatar(avatar, messageHTML);
+    if (avatarResponse.error == null && messageHTML.value) {
+        // 上传头像成功
+        messageHTML.value.showMessage("上传成功");
+        // 刷新页面
+        setTimeout(() => {
+            location.reload();
+        }, 1000)
+    }
+}
+
 // 页面加载的初始化信息
 const init = async () => {
     const loginUserResponse = await readLoginUser()
@@ -203,23 +215,6 @@ const init = async () => {
         await loadAvatar(user.value.username, user.value.id);
     }
 }
-
-// 上传头像
-const uploadAvatar = async (avatar: string) => {
-    const avatarResponse = await createAvatar(avatar);
-    if (avatarResponse.error && messageHTML.value) {
-        // 上传失败弹出消息盒子, 提醒用户
-        messageHTML.value.showMessage(avatarResponse.error.message);
-    } else if (avatarResponse.error == null && messageHTML.value) {
-        // 上传头像成功z
-        messageHTML.value.showMessage("上传成功");
-        // 刷新页面
-        setTimeout(() => {
-            location.reload();
-        }, 1000)
-    }
-}
-
 // 加载的时候加载用户信息
 onMounted(init);
 </script>

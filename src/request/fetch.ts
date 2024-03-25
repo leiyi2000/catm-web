@@ -1,5 +1,7 @@
+import { Ref } from 'vue';
 import { OnFetchErrorContext, UseFetchReturn, createFetch } from '@vueuse/core'
 
+import Message from "../components/Message.vue";
 import { Errors, HError, DEFAULT_ERROR } from '../request/errors'
 
 
@@ -35,7 +37,7 @@ export const Fetch = createFetch({
 
 
 export interface FetchResponse<T> {
-    error: Error | null,
+    error: HError | null,
     data: T | null,
 }
 
@@ -43,7 +45,27 @@ export interface FetchResponse<T> {
 export function buildFetchResponse<T>(response: UseFetchReturn<any>): FetchResponse<T> {
     const {error, data} = response;
     return {
-        error: error.value as Error || null,
+        error: error.value as HError || null,
         data: data.value as T | null,
     }
+}
+
+
+export async function post<T>(url: string, payload?: any, message?: Ref<InstanceType<typeof Message> | undefined | null>) {
+    const response = await Fetch<T>(url).post(payload).json();
+    const data = buildFetchResponse<T>(response);
+    if (data.error && message) {
+        message.value?.showError(data.error);
+    }
+    return data;
+}
+
+
+export async function get<T>(url: string, message?: Ref<InstanceType<typeof Message> | undefined | null>) {
+    const response = await Fetch<T>(url).get().json();
+    const data = buildFetchResponse<T>(response);
+    if (data.error && message) {
+        message.value?.showError(data.error);
+    }
+    return data;
 }
